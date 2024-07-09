@@ -59,6 +59,10 @@ logger.info("Modelo cargado y listo para inferir...")
 def remove_file_after_sent(path: str):
     os.remove(path)
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 @app.post("/default/inference")
 async def infer(body: Texto, background_tasks: BackgroundTasks):
     logger.debug("Solicitud recibida")

@@ -9,17 +9,25 @@ Este proyecto consta de un TTS (Text To Speech) para la empresa Alloxentric, en 
 
 Como requisito, se debe realizar una instalación de docker para no generar problemas con las librerias y versiones. 
 
-Tener instalado Python 3.9 o superior.
+Tener instalado Python >= 3.9, < 3.12.
 
 Una vez se tiene instalado docker, se debe dirigir hacia el siguiente directorio dentro de la maquina virtual: 
 
 ```bash
-cd /opt/alloxentric/TTS
+cd /opt/alloxentric/xTTS
 ```
+
+En caso de no existir el directorio se debe realizar una copia del repositorio designado para este proyecto con el comando:
+
+```bash
+git clone https://github.com/viksosdev/xTTS.git
+```
+
+Y luego cambiar al directorio creado.
     
 ## Despliegue
 
-#### Build de Docker
+### Build de Docker
 
 ```bash
 sudo docker build -t <Nombre de contenedor> .
@@ -28,13 +36,21 @@ sudo docker build -t <Nombre de contenedor> .
 
 Una vez creado el contenedor de Docker, este contendrá lo necesario para que la aplicación pueda ejecutarse. Posterior a esto, hay que ejecutar el contenedor junto con el puerto que se desee utilizar:
 
-#### Ejecutar Docker
+### Ejecutar Docker
 
 ```bash
 sudo docker run -d --gpus all -p 8002:8002 <Nombre de contenedor>
 ```
 
 Con estos pasos, el modelo y API ya están ejecutandose en segundo plano.
+
+#### Sin modelo entrenado incluido
+
+Si se realizó una descarga del repositorio es probable que el modelo preentrenado no exista, por lo que si se intenta iniciar el contenedor docker con el comando anterior se obtendrán errores debido a la inexistencia del modelo.
+
+Para solucionar esto, se debe ingresar al contenedor y realizar los pasos de entrenamiento para generar el modelo.
+
+Si se quiere guardar el progreso, es recomendable copiar los archivos del modelo a la carpeta base con la que se creó el contenedor, para que en futuras ejecuciones no se tenga que volver a entrenar.
 
 ## Entrenamiento
 ### Requisitos previos
@@ -85,6 +101,10 @@ Una vez corriendo la API se puede realizar la inferencia realizando una petició
 Para más información revisar http://34.151.250.35:8002/docs
 
 La respuesta a esta petición entregará un audio en formato .wav 
+
+Se ha designado un healthcheck, que puede ser consultado en http://34.151.250.35:8002/health
+
+
 
 
 
