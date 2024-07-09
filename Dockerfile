@@ -13,7 +13,10 @@ RUN rm -rf /root/.cache/pip
 WORKDIR /root
 COPY . /root
 
+EXPOSE 8002
+
+HEALTHCHECK --interval=60s --timeout=10s --start-period=20s --retries=5 CMD curl --fail https://0.0.0.0:8002/health || exit 1
+
 RUN make install
 
-ENTRYPOINT ["tts"]
-CMD ["--help"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8002"]
