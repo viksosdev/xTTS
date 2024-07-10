@@ -57,4 +57,3 @@ num2words
 spacy[ja]>=3
 fastapi
 uvicorn
-logging
