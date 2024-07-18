@@ -3,22 +3,23 @@ import torch
 import torchaudio
 import logging
 import datetime
-from TTS.tts.configs.xtts_config import XttsConfig
-from TTS.tts.models.xtts import Xtts
-from fastapi import FastAPI, BackgroundTasks
+
+from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
 from pydantic import BaseModel
 from fastapi.responses import FileResponse
+from logging.handlers import TimedRotatingFileHandler
 
-app = FastAPI()
+from TTS.tts.configs.xtts_config import XttsConfig
+from TTS.tts.models.xtts import Xtts
 
 # Configuración de logs
-date = datetime.datetime.now().strftime("%Y-%m-%d")
 
 logger = logging.getLogger('xTTS')
 logger.setLevel(logging.DEBUG)
 
-file_handler = logging.FileHandler("/root/logs/Logs-API-xTTS-"+date+".txt")
+file_handler = TimedRotatingFileHandler("/root/logs/Logs-API-xTTS.txt", when="midnight", interval=1)
 file_handler.setLevel(logging.DEBUG)
+file_handler.suffix = "%Y-%m-%d"
 
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
@@ -30,12 +31,7 @@ console_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 
-# Definición modelos de datos a recibir
-class Texto(BaseModel):
-    text: str
-    temperature: float = 0.7
-    output: str = "genapi.wav"
-    codec: str = "wav"
+app = FastAPI()
 
 # Paths de configuración
 CONFIG_PATH = "/root/AlloxentricModel/config.json"
@@ -43,6 +39,12 @@ TOKENIZER_PATH = "/root/XTTSModel/vocab.json"
 XTTS_CHECKPOINT = "/root/AlloxentricModel/best_model.pth"
 SPEAKER_REFERENCE = "/root/1minuto.wav"
 # Fin de paths de configuración
+
+# Definición modelos de datos a recibir
+class Texto(BaseModel):
+    text: str
+    temperature: float = 0.7
+    codec: str = "wav"
 
 logger.debug("Cargando modelo...")
 config = XttsConfig()
@@ -64,11 +66,12 @@ def health():
     return {"status": "ok"}
 
 @app.post("/default/inference")
-async def infer(body: Texto, background_tasks: BackgroundTasks):
-    logger.debug("Solicitud recibida")
-    logger.debug("Texto recibido: "+body.text)
-    logger.info("Realizando inferencia...")
-    
+async def infer(body: Texto, background_tasks: BackgroundTasks, request: Request):
+
+    FILE_PATH = f"/root/{datetime.datetime.now()}.{body.codec}"
+    logger.info(f"Solicitud recibida desde {request.client.host}, infiriendo texto...")
+    time_strt = datetime.datetime.now()
+
     out = model.inference(
         body.text,
         "es",
@@ -79,17 +82,17 @@ async def infer(body: Texto, background_tasks: BackgroundTasks):
         enable_text_splitting=True,
         temperature=body.temperature,
     )
-    
-    torchaudio.save(body.output, torch.tensor(out[body.codec]).unsqueeze(0), 24000)
-    
-    if(os.path.exists(body.output)):
-        background_tasks.add_task(remove_file_after_sent, body.output)
-        logger.debug("Audio eliminado después de ser enviado")
-        logger.info("Audio generado correctamente y enviado")
-        return FileResponse(body.output, media_type='audio/wav', filename=body.output)
+
+    time_end = datetime.datetime.now()
+    torchaudio.save(FILE_PATH, torch.tensor(out[body.codec]).unsqueeze(0), 24000)
+    total_time = time_end - time_strt
+    if(os.path.exists(FILE_PATH)):
+        background_tasks.add_task(remove_file_after_sent, FILE_PATH)
+        logger.info(f"Inferencia realizada desde {request.client.host}; texto inferido: '{body.text}'; tiempo total: {total_time.seconds}.{total_time.microseconds}s; archivo retornado: {FILE_PATH}")
+        return FileResponse(FILE_PATH, media_type='audio/wav', filename=FILE_PATH)
     else:
         logger.error("No se pudo generar el audio")
-        return {"error": "No se pudo generar el audio"}
+        raise HTTPException(status_code=500, detail="No se pudo generar el audio")
 
 if __name__ == "__main__":
     import uvicorn
