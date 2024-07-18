@@ -39,7 +39,7 @@ Una vez creado el contenedor de Docker, este contendrá lo necesario para que la
 ### Ejecutar Docker
 
 ```bash
-sudo docker run -d --gpus all -p 8002:8002 <Nombre de contenedor>
+sudo docker run -d --gpus all -p 8002:8002 -v /opt/alloxentric/xTTS/logs:/root/logs <Nombre de contenedor>
 ```
 
 Con estos pasos, el modelo y API ya están ejecutandose en segundo plano.
@@ -92,7 +92,7 @@ Pueden existir errores si no se tiene una cantidad mínima de datos para entrena
 
 Una vez realizado el entrenamiento se obtendrán archivos como **best_model.pth** y un **config.json** en la carpeta designada anteriormente, para utilizar el modelo se debe insertar la ubicación de estos archivos en el script de la API. Y luego reiniciar el servicio, cómo docker elimina los archivos al reiniciarse, se recomienda cerrar la API con **Ctrl+C** y volver a iniciarla con el siguiente comando:
 ```bash
-uvicorn main:app --host 0.0.0.0 --port 8002
+uvicorn main:app --host 0.0.0.0 --port 8002 --workers 2
 ```
 
 En caso de que no se haya realizado entrenamiento y se desee usar el modelo preentrenado, solo se debe iniciar el contenedor docker.
